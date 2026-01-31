@@ -9,6 +9,8 @@ public class MaskPickup : MonoBehaviour
     public MaskType maskColor; // Select 'Red' in the inspector for this one
     [SerializeField] private float floatSpeed = 2f;
     [SerializeField] private float floatHeight = 0.25f;
+    [SerializeField] private GameObject dialogueBox;
+    [SerializeField] private Dialogue dialogueSystem;
 
     private Vector3 startPos;
 
@@ -31,6 +33,8 @@ public class MaskPickup : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             PickUp(other.gameObject);
+            dialogueBox.SetActive(true);
+            dialogueSystem.StartDialogue();
         }
     }
 
