@@ -1,60 +1,100 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class Movement : MonoBehaviour
 {
     [Header("Components")]
     [SerializeField] private Rigidbody2D rb;
     [SerializeField] private InputManager inputManager;
+    [SerializeField] private PlayerAbilities abilities; // Reference to check for Blue Mask
 
     [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float jumpForce = 10f;
+
+    [Header("Climbing Settings")]
+    [SerializeField] private float climbSpeed = 4f;
+    [SerializeField] private LayerMask wallLayer;
+    [SerializeField] private Transform wallCheck; // Assign a new empty object here
 
     [Header("Ground Detection")]
     [SerializeField] private Transform groundCheck;
     [SerializeField] private float groundCheckRadius = 0.2f;
     [SerializeField] private LayerMask groundLayer;
 
-    // FixedUpdate is for physics calculations
-    void FixedUpdate()
-    {
-        // 1. Calculate X velocity based on Input
-        // We only use .x from the input so Up/Down on the stick doesn't affect movement
-        float xVelocity = inputManager.moveInput.x * moveSpeed;
+    private float defaultGravity;
+    private bool isClimbing;
 
-        // 2. Apply Velocity
-        // IMPORTANT: We use 'rb.linearVelocity.y' for the Y axis to preserve 
-        // the effect of gravity (falling) calculated by the physics engine.
-        rb.linearVelocity = new Vector2(xVelocity, rb.linearVelocity.y);
+    void Start()
+    {
+        // Store normal gravity so we can restore it after climbing
+        defaultGravity = rb.gravityScale;
     }
 
-    // Call this method from your InputManager script when the button is pressed
+    void FixedUpdate()
+    {
+        // 1. Standard Horizontal Movement
+        float xVelocity = inputManager.moveInput.x * moveSpeed;
+        
+        // 2. Climbing Logic
+        if (CanClimb())
+        {
+            isClimbing = true;
+            rb.gravityScale = 0f; // Turn off gravity so we don't slide down
+            
+            // Move Up/Down based on Vertical Input
+            float yVelocity = inputManager.moveInput.y * climbSpeed;
+            rb.linearVelocity = new Vector2(xVelocity, yVelocity);
+        }
+        else
+        {
+            isClimbing = false;
+            rb.gravityScale = defaultGravity; // Restore gravity
+            
+            // Normal Gravity Movement
+            rb.linearVelocity = new Vector2(xVelocity, rb.linearVelocity.y);
+        }
+    }
+
+    private bool CanClimb()
+    {
+        // Check 1: Are we actually touching a "Climbable" wall?
+        bool touchingWall = Physics2D.OverlapCircle(wallCheck.position, groundCheckRadius, wallLayer);
+        
+        // Check 2: Do we have the Blue Mask?
+        bool hasPower = abilities != null && abilities.hasBlueMask;
+
+        // Check 3: Is the player actually pressing Up/Down? (Optional, prevents sticking by accident)
+        bool distinctInput = Mathf.Abs(inputManager.moveInput.y) > 0.1f;
+
+        return touchingWall && hasPower && distinctInput;
+    }
+
     public void OnJump()
     {
-        if (IsGrounded())
+        if (IsGrounded() || isClimbing)
         {
-            // Reset Y velocity before jumping to ensure consistent jump height
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0);
-            
-            // Apply instant upward force
             rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
         }
     }
 
     private bool IsGrounded()
     {
-        // Creates a small invisible circle at the feet to check if we are touching 'Ground'
         return Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
     }
 
-    // Visualizes the ground check in the Editor so you can position it correctly
     private void OnDrawGizmosSelected()
     {
         if (groundCheck != null)
         {
             Gizmos.color = Color.yellow;
             Gizmos.DrawWireSphere(groundCheck.position, groundCheckRadius);
+        }
+        // Visualizer for the Wall Check
+        if (wallCheck != null)
+        {
+            Gizmos.color = Color.blue;
+            Gizmos.DrawWireSphere(wallCheck.position, groundCheckRadius);
         }
     }
 }
