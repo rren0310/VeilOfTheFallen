@@ -59,7 +59,7 @@ public class PlayerAbilities : MonoBehaviour
 
         // Visual Debug
         Color color = (hit.collider != null) ? Color.green : Color.red;
-        Debug.DrawRay(origin, Vector2.right * direction * interactRange, color, 2f);
+        //Debug.DrawRay(origin, Vector2.right * direction * interactRange, color, 2f);
 
         if (hit.collider != null)
         {

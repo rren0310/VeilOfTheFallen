@@ -3,64 +3,65 @@ using System.Collections;
 
 public class ChangeablePlatform : MonoBehaviour
 {
-    [Header("Configuration")]
-    [SerializeField] private float activeDuration = 3.0f;
-    [SerializeField] private Color frozenColor = Color.yellow; // Visual feedback when stopped
+    [Header("Settings")]
+    [Tooltip("How long the platform stops moving when shot.")]
+    [SerializeField] private float stopDuration = 3.0f;
+    
+    [Tooltip("Color to change to when stopped (Visual Feedback).")]
+    [SerializeField] private Color frozenColor = Color.yellow; 
 
     [Header("References")]
-    [SerializeField] private MovingPlatform moveScript; // Drag your MovingPlatform script here
+    [SerializeField] private MovingPlatform moveScript;
     [SerializeField] private SpriteRenderer myRenderer;
 
     private Color originalColor;
-    private bool isFrozen = false;
-    private Coroutine revertCoroutine;
+    private Coroutine stopCoroutine;
+    private bool isStopped = false;
 
     private void Start()
     {
+        // Save the original color so we can switch back later
         if (myRenderer != null) originalColor = myRenderer.color;
-        
-        // Ensure the platform starts moving
-        if (moveScript != null) moveScript.enabled = true;
+
+        // Auto-find the moving script if you forgot to drag it in
+        if (moveScript == null) moveScript = GetComponent<MovingPlatform>();
     }
 
-    // Called by the Yellow Mask Raycast
+    // This function is called by your Player's "Yellow Mask" Raycast
     public void ActivateChange()
     {
-        // If already frozen, just reset the timer so it stays frozen longer
-        if (isFrozen)
+        // If already stopped, just reset the timer (keep it stopped longer)
+        if (isStopped)
         {
-            if (revertCoroutine != null) StopCoroutine(revertCoroutine);
-            revertCoroutine = StartCoroutine(RevertRoutine());
+            if (stopCoroutine != null) StopCoroutine(stopCoroutine);
+            stopCoroutine = StartCoroutine(WaitAndResume());
             return;
         }
 
-        // Freeze the platform
-        isFrozen = true;
+        // 1. FREEZE!
+        isStopped = true;
         
-        // Visual Feedback
-        if (myRenderer != null) myRenderer.color = frozenColor;
-        
-        // Logic: Turn OFF the movement script
+        // Turn OFF the movement script
         if (moveScript != null) moveScript.enabled = false;
 
-        // Start countdown to unfreeze
-        revertCoroutine = StartCoroutine(RevertRoutine());
+        // Change Color
+        if (myRenderer != null) myRenderer.color = frozenColor;
+
+        // Start the timer to unfreeze
+        stopCoroutine = StartCoroutine(WaitAndResume());
     }
 
-    private IEnumerator RevertRoutine()
+    private IEnumerator WaitAndResume()
     {
-        yield return new WaitForSeconds(activeDuration);
-        Unfreeze();
-    }
+        yield return new WaitForSeconds(stopDuration);
 
-    private void Unfreeze()
-    {
-        isFrozen = false;
-        
+        // 2. UNFREEZE!
+        isStopped = false;
+
         // Restore Color
         if (myRenderer != null) myRenderer.color = originalColor;
-        
-        // Restore Movement
+
+        // Turn ON the movement script
         if (moveScript != null) moveScript.enabled = true;
     }
 }

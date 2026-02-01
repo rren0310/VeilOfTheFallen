@@ -2,91 +2,54 @@ using UnityEngine;
 
 public class MovingPlatform : MonoBehaviour
 {
-    [Header("Settings")]
-    [SerializeField] private float speed = 3f;
-    [SerializeField] private float waitTime = 1f; // Pause at each end
-    
-    [Header("Path Points")]
-    [Tooltip("Drag empty GameObjects here to define the path.")]
+    [Header("Waypoints")]
     [SerializeField] private Transform[] waypoints;
+    [SerializeField] private float speed = 2f;
+    [SerializeField] private float waitTime = 0.5f;
 
     private int currentPointIndex = 0;
-    private float waitTimer;
-    private bool isWaiting;
+    private float waitCounter = 0f;
+    private bool isWaiting = false;
 
-    private void Start()
+    private void Update()
     {
-        // If no waypoints are set, don't do anything to avoid errors
-        if (waypoints == null || waypoints.Length < 2)
-        {
-            Debug.LogWarning("Moving Platform needs at least 2 waypoints!");
-            enabled = false;
-            return;
-        }
+        // 1. Safety Check: If no waypoints, do nothing
+        if (waypoints == null || waypoints.Length < 2) return;
 
-        // Snap platform to the first point immediately
-        transform.position = waypoints[0].position;
-    }
-
-    private void FixedUpdate()
-    {
+        // 2. If we are at the target waypoint, wait
         if (isWaiting)
         {
-            waitTimer -= Time.fixedDeltaTime;
-            if (waitTimer <= 0)
+            waitCounter -= Time.deltaTime;
+            if (waitCounter <= 0)
             {
                 isWaiting = false;
-                NextWaypoint();
+                currentPointIndex = (currentPointIndex + 1) % waypoints.Length;
             }
             return;
         }
 
-        MovePlatform();
-    }
-
-    private void MovePlatform()
-    {
-        // Get the target position
+        // 3. Move towards the current target
         Transform target = waypoints[currentPointIndex];
-        
-        // Move towards the target
-        transform.position = Vector3.MoveTowards(transform.position, target.position, speed * Time.fixedDeltaTime);
+        transform.position = Vector3.MoveTowards(transform.position, target.position, speed * Time.deltaTime);
 
-        // Check if we reached the target (very close distance)
+        // 4. Check if we reached the target
         if (Vector3.Distance(transform.position, target.position) < 0.05f)
         {
-            // Start waiting
             isWaiting = true;
-            waitTimer = waitTime;
+            waitCounter = waitTime;
         }
     }
 
-    private void NextWaypoint()
-    {
-        currentPointIndex++;
-        // If we reached the end of the list, loop back to 0
-        if (currentPointIndex >= waypoints.Length)
-        {
-            currentPointIndex = 0;
-        }
-    }
-    
-    // VISUALIZATION: Draws lines in the editor so you can see the path
+    // Helps you see the path in the Editor
     private void OnDrawGizmos()
     {
         if (waypoints == null || waypoints.Length < 2) return;
-
-        Gizmos.color = Color.green;
+        //Gizmos.color = Color.green;
         for (int i = 0; i < waypoints.Length; i++)
         {
             Transform p1 = waypoints[i];
-            Transform p2 = waypoints[(i + 1) % waypoints.Length]; // Loop back to start
-
-            if (p1 != null && p2 != null)
-            {
-                Gizmos.DrawLine(p1.position, p2.position);
-                Gizmos.DrawWireSphere(p1.position, 0.2f);
-            }
+            Transform p2 = waypoints[(i + 1) % waypoints.Length];
+            if (p1 != null && p2 != null) Gizmos.DrawLine(p1.position, p2.position);
         }
     }
 }

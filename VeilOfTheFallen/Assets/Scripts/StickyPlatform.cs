@@ -8,7 +8,6 @@ public class StickyPlatform : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Player"))
         {
-            // Save a reference to the player
             playerTransform = collision.transform;
             playerTransform.SetParent(transform);
         }
@@ -16,20 +15,21 @@ public class StickyPlatform : MonoBehaviour
 
     private void OnCollisionExit2D(Collision2D collision)
     {
-        // Only try to un-parent if the object is actually active.
-        // If it's turning off, OnDisable will handle it safely.
-        if (gameObject.activeInHierarchy && collision.gameObject.CompareTag("Player"))
+        // FIX: If the platform is turning off (Deactivating), stop here!
+        // This prevents the "Cannot set parent" error.
+        if (!gameObject.activeInHierarchy) return;
+
+        if (collision.gameObject.CompareTag("Player"))
         {
             collision.transform.SetParent(null);
             playerTransform = null;
         }
     }
 
-    // SAFEGUARD: This runs immediately when the platform is turned off (or destroyed)
+    // This acts as the backup "Un-sticker" when the object vanishes
     private void OnDisable()
     {
-        // If we are currently holding the player, let them go immediately
-        if (playerTransform != null && playerTransform.parent == transform)
+        if (playerTransform != null)
         {
             playerTransform.SetParent(null);
             playerTransform = null;
